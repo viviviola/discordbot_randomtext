@@ -3,11 +3,15 @@
 #TODO: more description here
 
 import discord
-import re
+import random
+#import re
 
 
 # Store user-quote pairs in a growing database
-database = { }
+database = {
+    "one": "blahblahblah",
+    "two": "eqrewrewqtegasd",
+}
 
 
 # Initialize Discord client and log-in the bot
@@ -25,8 +29,30 @@ async def on_message(message):
     if (message.author == client.user):
         return
 
+    # On $hello, print a helpful list of the bot's commands
     if message.content.startswith("$hello"):
         await message.channel.send("Hello!")
+
+    # On $store, store the quoted message to the database
+    if ("$store" in message.content):
+        # Check that there was a quote
+
+        # Check that there was an attribution (how to get the ID
+        # given the mention? Is there a way to query the channel?)
+        
+        await message.channel.send(
+            "Here is where I'd store a quote!"
+        )
+
+    # On $random, return a random quote divorced of any context
+    if message.content.startswith("$random"):
+        await message.channel.send(random.choice(list(database.values())))
+
+    # On $debug, echo the raw text of the message that the bot sees
+    if ("$debug" in message.content):
+        await message.channel.send(
+            "RAW:\n```text\n{}\n```".format(message.content)
+        )
         
 
 # Get locally-stored bot token and run
