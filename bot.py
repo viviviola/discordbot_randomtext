@@ -22,13 +22,17 @@ def parse_quoted_message(message):
     
     # All of the lines following a ">" are part of the quote
     quoted_lines = list(filter(lambda line: line.startswith(">"), message))
-    quote = "\n".join(map(lambda line: line.replace("> ", ""), quoted_lines)) 
+    quote = "\n".join(map(lambda line: line[2:], quoted_lines)) 
     
     # Assume the attributed user is the first mention directly
     # following the first quoted text.
     other_lines = list(filter(lambda line: not(line.startswith(">")), message))
     rest_of_message = "\n".join(other_lines)
-    user = re.findall(r"(?<=\<@!)\d+", rest_of_message)[0]
+
+    # Apparently some user IDs don't have an exclamation mark prefix?
+    mentions = re.findall(r"(?<=\<@!)\d+", rest_of_message) \
+               + re.findall(r"(?<=\<@)\d+", rest_of_message)
+    user = mentions[0]
 
     return [user, quote]
 
@@ -82,6 +86,9 @@ async def on_message(message):
         await message.channel.send(
             "RAW:\n```text\n{}\n```".format(message.content)
         )
+
+    if ("$dumpdatabase" in message.content):
+        await(message.channel.send(str(database)))
         
 
 # Get locally-stored bot token and run
