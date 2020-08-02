@@ -3,9 +3,11 @@
 #TODO: more description here
 
 import discord
+import pickle
 
 from collections import defaultdict
 from itertools import chain
+from os import path
 from random import choice
 from re import findall
 
@@ -32,21 +34,35 @@ def parse_quoted_message(message):
     other_lines = list(filter(lambda line: not(line.startswith(">")), message))
     rest_of_message = "\n".join(other_lines)
 
-    # Apparently some user IDs don't have an exclamation mark prefix?
-    # TODO: Fix this up, it's kind of ugly.
-    mentions = findall(r"(?<=\<@!)\d+", rest_of_message) \
-               + findall(r"(?<=\<@)\d+", rest_of_message)
+    # User IDs will have an exclamation mark prefix if they are using a
+    # server nickname apparently
+    # TODO: Fix this up? It's kind of ugly.
+    mentions = findall(r"(?<=\<@)\d+", rest_of_message) \
+               + findall(r"(?<=\<@!)\d+", rest_of_message)
     print(str(mentions))  # DEBUG
     user = mentions[0]
 
     return [user, quote]
 
 
-# Initialize Discord client and log-in the bot
+# Initialize Discord client and log-in the bot. Reads in a local
+# database of quotes if available (assume they are stored in
+# database.txt).
 client = discord.Client()
 
 @client.event
 async def on_ready():
+    # Read in the local database of quotes if it exists
+    # TODO: Binary for now, but might want human-readable text?
+    if (path.exists("database.ser")):
+        global database
+        with open("database.ser", "rb") as database_file:
+            database = pickle.loads(database_file.read())
+
+        # DEBUG: print contents of the database to console
+        print("Local database file:\n{}".format(str(database)))
+
+    # DEBUG: Successful login
     print("Logged in as {0.user}".format(client))
 
 
@@ -58,11 +74,11 @@ async def on_message(message):
         return
 
     # On $help, print a helpful list of the bot's commands
-    if message.content.startswith("$help"):
+    if (message.content.startswith("$help")):
         await message.channel.send("TODO")
 
     # On $hello, say a nice greeting
-    if message.content.startswith("$hello"):
+    if (message.content.startswith("$hello")):
         await message.channel.send("Hello!")
         
     # On $store, store the quoted message to the database
@@ -78,7 +94,7 @@ async def on_message(message):
         )
 
     # On $random, return a random quote divorced of any context
-    if message.content.startswith("$random"):
+    if (message.content.startswith("$random")):
         quotes = list(chain(*database.values()))
         if (not quotes):
             await message.channel.send("I don't have any quotes stored yet!")
@@ -96,9 +112,28 @@ async def on_message(message):
     # (Eventually disable this so we don't trip the message
     # character limit)
     if ("$dumpdatabase" in message.content):
+        # Write database?
+        with open("database.ser", "wb") as database_file:
+            pickle.dump(database, database_file)
+        
         print(str(database))
         await(message.channel.send(str(database)))
-        
+
+    # On $exit, gracefully disconnect from the server
+    if ("$shutdown" in message.content):
+        await client.close()
+
+
+# When the bot disconnects/log out, store the database locally
+@client.event
+async def on_disconnect():
+    # Store the live database to a local file
+    # TODO: Apparently this function can be called many times
+    # (simultaneously?). Might need a mutex to make sure the data
+    # doesn't get corrupted or something?    
+    with open("database.ser", "wb") as database_file:
+        pickle.dump(database, database_file)
+
 
 # Get locally-stored bot token and run
 # (Assume token stored in directory in bot_token.txt)
@@ -106,6 +141,3 @@ with open("bot_token.txt", "r") as reader:
     bot_token = reader.readline()
     
 client.run(bot_token)
-
-
-

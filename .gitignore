@@ -1,6 +1,7 @@
 # Ignore bot_token.txt and any locally-stored database files
 *.txt
 *.json
+*.ser
 
 
 # Byte-compiled / optimized / DLL files
