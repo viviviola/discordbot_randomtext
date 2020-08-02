@@ -3,12 +3,15 @@
 #TODO: more description here
 
 import discord
-import random
-import re
+
+from collections import defaultdict
+from itertools import chain
+from random import choice
+from re import findall
 
 
 # Store user-quote pairs in a growing database
-database = { }
+database = defaultdict(set)
 
 
 # Given a Discord message string containing a quote, parse and
@@ -30,8 +33,10 @@ def parse_quoted_message(message):
     rest_of_message = "\n".join(other_lines)
 
     # Apparently some user IDs don't have an exclamation mark prefix?
-    mentions = re.findall(r"(?<=\<@!)\d+", rest_of_message) \
-               + re.findall(r"(?<=\<@)\d+", rest_of_message)
+    # TODO: Fix this up, it's kind of ugly.
+    mentions = findall(r"(?<=\<@!)\d+", rest_of_message) \
+               + findall(r"(?<=\<@)\d+", rest_of_message)
+    print(str(mentions))  # DEBUG
     user = mentions[0]
 
     return [user, quote]
@@ -63,7 +68,7 @@ async def on_message(message):
     # On $store, store the quoted message to the database
     if ("$store" in message.content):
         user, quote = parse_quoted_message(message.content)
-        database[user] = quote
+        database[user].add(quote)
         
         await message.channel.send(
             "I saw <@!{}> say\n{}\n\n Stored!".format(
@@ -74,11 +79,11 @@ async def on_message(message):
 
     # On $random, return a random quote divorced of any context
     if message.content.startswith("$random"):
-        quotes = list(database.values())
+        quotes = list(chain(*database.values()))
         if (not quotes):
             await message.channel.send("I don't have any quotes stored yet!")
         else:
-            await message.channel.send(random.choice(quotes))
+            await message.channel.send(choice(quotes))
 
     # On $debug, echo the raw text of the message that the bot sees
     if ("$debug" in message.content):
@@ -87,7 +92,11 @@ async def on_message(message):
             "RAW:\n```text\n{}\n```".format(message.content)
         )
 
+    # On $dumpdatabase, dump the entire database listing as a message
+    # (Eventually disable this so we don't trip the message
+    # character limit)
     if ("$dumpdatabase" in message.content):
+        print(str(database))
         await(message.channel.send(str(database)))
         
 
