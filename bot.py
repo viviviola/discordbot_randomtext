@@ -87,14 +87,14 @@ async def on_message(message):
         database[user].add(quote)
         
         await message.channel.send(
-            "I saw <@!{}> say\n{}\n\n Stored!".format(
+            "I saw <@!{}> say\n{}\n\nStored!".format(
                 user,
                 "> " + quote.replace("\n", "\n> ")
             )
         )
 
     # On $random, return a random quote divorced of any context
-    if (message.content.startswith("$random")):
+    if ("$random" in message.content):
         quotes = list(chain(*database.values()))
         if (not quotes):
             await message.channel.send("I don't have any quotes stored yet!")
@@ -108,16 +108,14 @@ async def on_message(message):
             "RAW:\n```text\n{}\n```".format(message.content)
         )
 
-    # On $dumpdatabase, dump the entire database listing as a message
-    # (Eventually disable this so we don't trip the message
-    # character limit)
+    # On $dumpdatabase, dump the entire database listing to the console
+    # and re-save the database locally
     if ("$dumpdatabase" in message.content):
-        # Write database?
+        # Write database to local file
         with open("database.ser", "wb") as database_file:
             pickle.dump(database, database_file)
         
         print(str(database))
-        await(message.channel.send(str(database)))
 
     # On $exit, gracefully disconnect from the server
     if ("$shutdown" in message.content):
